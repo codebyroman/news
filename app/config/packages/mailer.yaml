@@ -1,0 +1,7 @@
+framework:
+    mailer:
+        dsn: '%env(MAILER_DSN)%'
+        envelope:
+            sender: 'info@project.test'
+        headers:
+            From: 'Project <info@project.test>'

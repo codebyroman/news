@@ -1,0 +1,3 @@
+{% extends "layout.html.twig" %}
+{% block heading %}Hello, {{ user.name }}!{% endblock %}
+{% block content %}You have the news to moderate. You can see it here: {{ news.getUrl() }}{% endblock %}

@@ -1,0 +1,3 @@
+{% extends "layout.html.twig" %}
+{% block heading %}Hello, {{ user.name }}!{% endblock %}
+{% block content %}Your news has been approved! You can see it here: {{ news.getUrl() }}{% endblock %}
