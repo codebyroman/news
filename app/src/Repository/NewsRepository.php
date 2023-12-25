@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\News;
+use App\Entity\User;
+use App\Model\ListOfNewsFilter;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
@@ -22,21 +24,48 @@ class NewsRepository extends ServiceEntityRepository
         parent::__construct($registry, News::class);
     }
 
-    public function getNewsByStatusPaginated(bool $status, int $offset, int $limit): Paginator
+    public function findByFilter(?ListOfNewsFilter $filter, int $offset, int $limit): Paginator
     {
+        // TODO improve filters
         $query = $this->createQueryBuilder('n')
-            ->andWhere('n.status = :status')
-            ->orderBy('n.id', 'DESC')
-            ->setParameter('status', $status)
+                    ->leftJoin('n.categories', 'c');
+
+        if (!is_null($filter)) {
+            if (!is_null($id = $filter->id)) {
+                $query
+                    ->andWhere('n.id = :id')
+                    ->setParameter('id', $id);
+            }
+            if (!is_null($title = $filter->title)) {
+                $query
+                    ->andWhere('n.title = :title')
+                    ->setParameter('title', $title);
+            }
+        }
+
+        $query
+            ->orderBy('u.id', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($limit);
 
         return new Paginator($query, false);
     }
 
-    public function countByStatus(int $status): int
+    public function countByFilter(?ListOfNewsFilter $filter)
     {
-        return $this->count(['status' => $status]);
+        $condition = [];
+
+        if (!is_null($filter)) {
+            if (!is_null($filter->id)) {
+                $condition['id'] = $filter->id;
+            }
+
+            if (!is_null($filter->title)) {
+                $condition['title'] = $filter->title;
+            }
+        }
+
+        return $this->count($condition);
     }
 
 //    /**

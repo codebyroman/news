@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\News;
 use App\Entity\User;
+use App\Exception\NoModeratorForCategoryException;
 use App\Repository\UserRepository;
 
 class ModeratorResolver
@@ -16,6 +17,12 @@ class ModeratorResolver
 
     public function resolve(News $news): User
     {
-        return $this->userRepository->findLeastBusyModerator($news->getCategories()->getKeys());
+        $moderator = $this->userRepository->findLeastBusyModerator($news);
+
+        if (!$moderator) {
+            throw new NoModeratorForCategoryException();
+        }
+
+        return $moderator;
     }
 }

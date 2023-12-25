@@ -2,11 +2,11 @@
 
 namespace App\Repository;
 
-use App\Entity\Category;
 use App\Entity\News;
 use App\Entity\User;
+use App\Model\ListOfUsersFilter;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -43,9 +43,68 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
-    public function findLeastBusyModerator(array $categories): User
+    public function findLeastBusyModerator(News $news): ?User
     {
-        // TODO
+        $qb = $this->createQueryBuilder('u');
+
+        return $qb->leftJoin('u.categoriesToModerate', 'c')
+            ->leftJoin('u.newsToModerate', 'n')
+            ->where('u.roles LIKE :moderatorRole')
+            ->andWhere('c.id IN (:categories)')
+            ->andWhere('n.status = :toModerateStatus')
+            ->setParameter('categories', $news->getCategories())
+            ->setParameter('moderatorRole', '%' . User::ROLE_MODERATOR . '%')
+            ->setParameter('toModerateStatus', News::STATUS_TO_MODERATE)
+            ->orderBy('COUNT(n.id)', 'ASC')
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findByFilter(?ListOfUsersFilter $filter, int $offset, int $limit): Paginator
+    {
+        $query = $this->createQueryBuilder('u');
+
+        if (!is_null($filter)) {
+            if (!is_null($id = $filter->id)) {
+                $query
+                    ->andWhere('u.id = :id')
+                    ->setParameter('id', $id);
+            }
+            if (!is_null($email = $filter->email)) {
+                $query
+                    ->andWhere('u.email = :email')
+                    ->setParameter('email', $email);
+            }
+        }
+
+        $query
+            ->orderBy('u.id', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit);
+
+        return new Paginator($query, false);
+    }
+
+    public function countByFilter(?ListOfUsersFilter $filter): int
+    {
+        $condition = [];
+
+        if (!is_null($filter)) {
+            if (!is_null($filter->id)) {
+                $condition['id'] = $filter->id;
+            }
+
+            if (!is_null($filter->email)) {
+                $condition['email'] = $filter->email;
+            }
+        }
+
+        return $this->count($condition);
+    }
+
+    public function existsByEmail(string $email): bool
+    {
+        return (bool) $this->findOneBy(['email' => $email]);
     }
 
 //    /**

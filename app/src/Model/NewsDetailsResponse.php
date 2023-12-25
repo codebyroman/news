@@ -2,26 +2,19 @@
 
 namespace App\Model;
 
+use App\Entity\Category;
 use App\Entity\News;
+use Doctrine\Common\Collections\Collection;
+use OpenApi\Attributes as OA;
 
 class NewsDetailsResponse
 {
     private int $id;
     private string $title;
     private string $content;
-    private CategoriesListResponse $categories;
-    private \DateTimeImmutable $publishedAt;
 
-    public static function createByEntity(News $news): NewsDetailsResponse
-    {
-        return (new self)
-            ->setId($news->getId())
-            ->setTitle($news->getTitle())
-            ->setContent($news->getContent())
-            ->setCategories(CategoriesListResponse::createByCollection($news->getCategories()))
-            ->setPublishedAt($news->getPublishedAt())
-            ;
-    }
+    #[OA\Property(property: 'categories', type: 'array', items: new OA\Items(type: CategoryDetailsResponse::class))]
+    private Collection $categories;
 
     public function getId(): int
     {
@@ -59,26 +52,14 @@ class NewsDetailsResponse
         return $this;
     }
 
-    public function getCategories(): CategoriesListResponse
+    public function getCategories(): Collection
     {
         return $this->categories;
     }
 
-    public function setCategories(CategoriesListResponse $categories): self
+    public function setCategories(Collection $categories): self
     {
         $this->categories = $categories;
-
-        return $this;
-    }
-
-    public function getPublishedAt(): \DateTimeImmutable
-    {
-        return $this->publishedAt;
-    }
-
-    public function setPublishedAt(\DateTimeImmutable $publishedAt): self
-    {
-        $this->publishedAt = $publishedAt;
 
         return $this;
     }

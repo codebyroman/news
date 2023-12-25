@@ -6,15 +6,8 @@ use App\Entity\Category;
 
 class CategoryDetailsResponse
 {
-    private string $id;
+    private int $id;
     private string $name;
-
-    public static function createByEntity(Category $category)
-    {
-        return (new self())
-            ->setId($category->getId())
-            ->setName($category->getName());
-    }
 
     public function getId(): string
     {

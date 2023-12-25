@@ -28,6 +28,7 @@ class CreateNewsRequest
         return $this->content;
     }
 
+    /** @return array<int> */
     public function getCategoryIds(): array
     {
         return $this->categoryIds;

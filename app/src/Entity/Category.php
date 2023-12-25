@@ -16,7 +16,7 @@ class Category
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $name = null;
+    private string $name;
 
     #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'moderatesCategories')]
     private Collection $moderators;
@@ -35,7 +35,7 @@ class Category
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getName(): string
     {
         return $this->name;
     }
@@ -59,7 +59,7 @@ class Category
     {
         if (!$this->moderators->contains($moderator)) {
             $this->moderators->add($moderator);
-            $moderator->addModeratesCategory($this);
+            $moderator->addCategoryToModerate($this);
         }
 
         return $this;
@@ -68,7 +68,7 @@ class Category
     public function removeModerator(User $moderator): static
     {
         if ($this->moderators->removeElement($moderator)) {
-            $moderator->removeModeratesCategory($this);
+            $moderator->removeCategoryToModerate($this);
         }
 
         return $this;

@@ -5,17 +5,25 @@ namespace App\Controller;
 use App\Entity\News;
 use App\Entity\User;
 use App\Model\CreateNewsRequest;
+use App\Model\ErrorResponse;
+use App\Model\IdResponse;
+use App\Model\ListOfNewsRequest;
+use App\Model\ListOfNewsResponse;
+use App\Model\NewsDetailsResponse;
+use App\Model\NewsStatusesResponse;
+use App\Model\SuccessResponse;
 use App\Service\NewsService;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use OpenApi\Attributes as OA;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/v1/news')]
+#[Route('/api/v1')]
 class NewsController extends AbstractController
 {
     public function __construct(
@@ -24,44 +32,83 @@ class NewsController extends AbstractController
     {
     }
 
-    #[Route('/', methods: ['GET'])]
-    public function news(#[MapQueryParameter] int $page): JsonResponse
+    #[Route('/news', methods: ['GET'])]
+    #[OA\Response(response: 200, description: 'Returns news by request', attachables: [new Model(type: ListOfNewsResponse::class)])]
+    public function news(#[MapRequestPayload] ListOfNewsRequest $listOfNewsRequest): JsonResponse
     {
-        return $this->json($this->newsService->getNewsList($page, News::STATUS_ACTIVE));
+        return $this->json($this->newsService->findByRequest($listOfNewsRequest));
     }
 
-    #[Route('/{id}', methods: ['GET'])]
-    public function newsById(int $id): JsonResponse
+    #[Route('/news/{id}', methods: ['GET'])]
+    #[OA\Response(response: 200, description: 'Returns news details by ID', attachables: [new Model(type: NewsDetailsResponse::class)])]
+    #[OA\Response(response: 404, description: 'News not found', attachables: [new Model(type: ErrorResponse::class)])]
+    public function newsById(#[MapEntity] News $news): JsonResponse
     {
-        return $this->json($this->newsService->getNewsById($id));
+        // TODO check permissions
+
+        return $this->json($this->newsService->prepareNewsDetails($news));
     }
 
-    #[Route('/', methods: ['POST'])]
+    #[Route('/news/statuses', methods: ['GET'])]
+    #[OA\Response(response: 200, description: 'Returns news statuses', attachables: [new Model(type: NewsStatusesResponse::class)])]
+    public function newsStatuses(): JsonResponse
+    {
+        return $this->json($this->newsService->getNewsStatuses());
+    }
+
+    #[Route('/news', methods: ['POST'])]
     #[IsGranted(User::ROLE_AUTHOR)]
+    #[OA\Response(response: 200, description: 'Create news', attachables: [new Model(type: IdResponse::class)])]
+    #[OA\Response(response: 404, description: 'Wrong categories', attachables: [new Model(type: ErrorResponse::class)])]
+    #[OA\Response(response: 403, description: 'Forbidden', attachables: [new Model(type: ErrorResponse::class)])]
+    #[OA\RequestBody(attachables: [new Model(type: CreateNewsRequest::class)])]
     public function createNews(#[MapRequestPayload] CreateNewsRequest $createNewsRequest,
-                               #[CurrentUser] UserInterface $user): JsonResponse
+                               #[CurrentUser] User $user): JsonResponse
     {
         return $this->json($this->newsService->createNews($createNewsRequest, $user));
     }
 
-    #[Route('/{id}/approve', methods: ['POST'])]
-    #[IsGranted(User::ROLE_MODERATOR)]
-    public function newsApprove(#[CurrentUser] UserInterface $user): JsonResponse
+    #[Route('/news/{id}/send-for-moderation', methods: ['POST'])]
+    #[IsGranted(User::ROLE_AUTHOR)]
+    #[OA\Response(response: 200, description: 'Send the news for moderation', attachables: [new Model(type: SuccessResponse::class)])]
+    #[OA\Response(response: 403, description: 'Forbidden', attachables: [new Model(type: ErrorResponse::class)])]
+    public function sendForModeration(#[MapEntity] News $news, #[CurrentUser] User $user): JsonResponse
     {
-        // TODO
+        $this->newsService->sendForModeration($news, $user);
+
+        return $this->json(new SuccessResponse());
     }
 
-    #[Route('/{id}/reject', methods: ['POST'])]
+    #[Route('/news/{id}/approve', methods: ['POST'])]
     #[IsGranted(User::ROLE_MODERATOR)]
-    public function newsReject(#[CurrentUser] UserInterface $user): JsonResponse
+    #[OA\Response(response: 200, description: 'Approve the news', attachables: [new Model(type: SuccessResponse::class)])]
+    #[OA\Response(response: 403, description: 'Forbidden', attachables: [new Model(type: ErrorResponse::class)])]
+    public function approve(#[MapEntity] News $news, #[CurrentUser] User $user): JsonResponse
     {
-        // TODO
+        $this->newsService->approve($news, $user);
+
+        return $this->json(new SuccessResponse());
     }
 
-    #[Route('/{id}/ban', methods: ['POST'])]
+    #[Route('/news/{id}/reject', methods: ['POST'])]
     #[IsGranted(User::ROLE_MODERATOR)]
-    public function newsBan(#[CurrentUser] UserInterface $user): JsonResponse
+    #[OA\Response(response: 200, description: 'Reject the news', attachables: [new Model(type: SuccessResponse::class)])]
+    #[OA\Response(response: 403, description: 'Forbidden', attachables: [new Model(type: ErrorResponse::class)])]
+    public function reject(#[MapEntity] News $news, #[CurrentUser] User $user): JsonResponse
     {
-        // TODO
+        $this->newsService->reject($news, $user);
+
+        return $this->json(new SuccessResponse());
+    }
+
+    #[Route('/news/{id}/ban', methods: ['POST'])]
+    #[IsGranted(User::ROLE_MODERATOR)]
+    #[OA\Response(response: 200, description: 'Ban the news', attachables: [new Model(type: SuccessResponse::class)])]
+    #[OA\Response(response: 403, description: 'Forbidden', attachables: [new Model(type: ErrorResponse::class)])]
+    public function ban(#[MapEntity] News $news, #[CurrentUser] User $user): JsonResponse
+    {
+        $this->newsService->ban($news, $user);
+
+        return $this->json(new SuccessResponse());
     }
 }

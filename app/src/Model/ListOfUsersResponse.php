@@ -2,10 +2,10 @@
 
 namespace App\Model;
 
-class NewsListResponse
+class ListOfUsersResponse
 {
     /**
-     * @var NewsDetailsResponse[]
+     * @var UserDetailsResponse[]
      */
     private array $items;
 
@@ -18,7 +18,7 @@ class NewsListResponse
     private int $total;
 
     /**
-     * @return NewsDetailsResponse[]
+     * @return UserDetailsResponse[]
      */
     public function getItems(): array
     {
@@ -26,7 +26,7 @@ class NewsListResponse
     }
 
     /**
-     * @param NewsDetailsResponse[] $items
+     * @param UserDetailsResponse[] $items
      */
     public function setItems(array $items): self
     {

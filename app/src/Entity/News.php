@@ -7,15 +7,17 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\JoinTable;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: NewsRepository::class)]
 class News
 {
-    const STATUS_ACTIVE = 1;
-    const STATUS_TO_MODERATE = 2;
-    const STATUS_REJECTED = 3;
-    const STATUS_BANNED = 4;
+    const STATUS_APPROVED = 1;
+    const STATUS_INACTIVE = 2;
+    const STATUS_TO_MODERATE = 3;
+    const STATUS_REJECTED = 4;
+    const STATUS_BANNED = 5;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -33,12 +35,13 @@ class News
 
     #[ORM\ManyToOne(inversedBy: 'writtenNews')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?UserInterface $author = null;
+    private ?User $author = null;
 
     #[ORM\ManyToOne(inversedBy: 'newsToModerate')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?UserInterface $moderator = null;
+    private ?User $moderator = null;
 
+    #[JoinTable(name: 'news_category_relation')]
     #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'news')]
     private Collection $categories;
 
@@ -56,6 +59,17 @@ class News
     public function __construct()
     {
         $this->categories = new ArrayCollection();
+    }
+
+    public static function getStatusLabels(): array
+    {
+        return [
+            'Active' => self::STATUS_APPROVED,
+            'Inactive' => self::STATUS_INACTIVE,
+            'Rejected' => self::STATUS_REJECTED,
+            'To moderate' => self::STATUS_TO_MODERATE,
+            'Banned' => self::STATUS_BANNED,
+        ];
     }
 
     public function getId(): ?int
@@ -99,19 +113,24 @@ class News
         return $this;
     }
 
-    public function getAuthor(): ?UserInterface
+    public function getAuthor(): ?User
     {
         return $this->author;
     }
 
-    public function setAuthor(?UserInterface $author): static
+    public function setAuthor(?User $author): static
     {
         $this->author = $author;
 
         return $this;
     }
 
-    public function getModerator(): ?UserInterface
+    public function isUserAuthor(User $author): bool
+    {
+        return $this->getAuthor()->getId() === $author->getId();
+    }
+
+    public function getModerator(): ?User
     {
         return $this->moderator;
     }
@@ -121,6 +140,11 @@ class News
         $this->moderator = $moderator;
 
         return $this;
+    }
+
+    public function isUserModerator(User $moderator): bool
+    {
+        return $this->getModerator()->getId() === $moderator->getId();
     }
 
     /**
@@ -171,9 +195,35 @@ class News
         return $this;
     }
 
-    public function isActive(): bool
+    public function setApproved(): self
     {
-        return $this->getStatus() === self::STATUS_ACTIVE;
+        $this->setStatus(self::STATUS_APPROVED);
+
+        return $this;
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->getStatus() === self::STATUS_APPROVED;
+    }
+
+    public function setInactive(): self
+    {
+        $this->setStatus(self::STATUS_INACTIVE);
+
+        return $this;
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->getStatus() === self::STATUS_INACTIVE;
+    }
+
+    public function setModerating(): self
+    {
+        $this->setStatus(self::STATUS_TO_MODERATE);
+
+        return $this;
     }
 
     public function isModerating(): bool
@@ -181,9 +231,23 @@ class News
         return $this->getStatus() === self::STATUS_TO_MODERATE;
     }
 
+    public function setRejected(): self
+    {
+        $this->setStatus(self::STATUS_REJECTED);
+
+        return $this;
+    }
+
     public function isRejected(): bool
     {
         return $this->getStatus() === self::STATUS_REJECTED;
+    }
+
+    public function setBanned(): self
+    {
+        $this->setStatus(self::STATUS_BANNED);
+
+        return $this;
     }
 
     public function isBanned(): bool

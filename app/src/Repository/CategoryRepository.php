@@ -21,7 +21,6 @@ class CategoryRepository extends ServiceEntityRepository
         parent::__construct($registry, Category::class);
     }
 
-
     /**
      * @return Category[] Returns an array of Category objects
      */
@@ -29,9 +28,15 @@ class CategoryRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('c')
             ->andWhere('c.id IN :ids')
+            ->setParameter('ids', $ids)
             ->getQuery()
             ->getResult()
         ;
+    }
+
+    public function existsByName(string $name): bool
+    {
+        return (bool) $this->findOneBy(['name' => $name]);
     }
 
 //    public function findOneBySomeField($value): ?Category

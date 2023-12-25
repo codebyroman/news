@@ -4,10 +4,9 @@ namespace App\Service;
 
 use App\Entity\News;
 use App\Entity\User;
-use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
-use Symfony\Component\Security\Core\User\UserInterface;
 
 
 class Notifier
@@ -26,40 +25,36 @@ class Notifier
     {
     }
 
-    public function sendEmailNewsApproved(UserInterface $author, News $news): void
+    public function sendEmailNewsApproved(User $author, News $news): void
     {
-        $this->sendEmail($author, $news, $this->approvedEmailSubject, $this->approvedEmailTemplate);
+        $this->mailer->send($this->composeEmail($author, $this->approvedEmailSubject, $this->approvedEmailTemplate,
+            ['news' => $news]));
     }
 
-    public function sendEmailNewsRejected(UserInterface $author, News $news): void
+    public function sendEmailNewsRejected(User $author, News $news): void
     {
-        $this->sendEmail($author, $news, $this->rejectedEmailSubject, $this->rejectedEmailTemplate);
+        $this->mailer->send($this->composeEmail($author, $this->rejectedEmailSubject, $this->rejectedEmailTemplate,
+            ['news' => $news]));
     }
 
-    public function sendEmailNewsBanned(UserInterface $author, News $news): void
+    public function sendEmailNewsBanned(User $author, News $news): void
     {
-        $this->sendEmail($author, $news, $this->bannedEmailSubject, $this->bannedEmailTemplate);
+        $this->mailer->send($this->composeEmail($author, $this->bannedEmailSubject, $this->bannedEmailTemplate,
+            ['news' => $news]));
     }
 
-    public function sendEmailNewsToModerate(UserInterface $moderator, News $news): void
+    public function sendEmailNewsToModerate(User $moderator, News $news): void
     {
-        $this->sendEmail($moderator, $news, $this->moderatingEmailSubject, $this->moderatingEmailTemplate);
+        $this->mailer->send($this->composeEmail($moderator, $this->moderatingEmailSubject, $this->moderatingEmailTemplate,
+            ['news' => $news]));
     }
 
-    protected function sendEmail(UserInterface $user, News $news, string $subject, string $template): void
-    {
-        $this->mailer->send($this->composeEmail($user, $news, $subject, $template));
-    }
-
-    protected function composeEmail(UserInterface $user, News $news, string $subject, string $template): TemplatedEmail
+    protected function composeEmail(User $user, string $subject, string $template, array $context = []): TemplatedEmail
     {
         return (new TemplatedEmail())
             ->to(new Address($user->getEmail()))
             ->subject($subject)
             ->htmlTemplate($template)
-            ->context([
-                'news' => $news,
-                'user' => $user,
-            ]);
+            ->context(array_merge(['user' => $user], $context));
     }
 }

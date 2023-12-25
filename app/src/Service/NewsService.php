@@ -2,18 +2,21 @@
 
 namespace App\Service;
 
-use App\Model\CategoriesListResponse;
+use App\Entity\News;
+use App\Entity\User;
+use App\Exception\NoCategoriesWithGivenIdsForNews;
+use App\Exception\UserIsNotAuthorException;
+use App\Exception\UserIsNotModeratorException;
+use App\Exception\WrongStatusException;
 use App\Model\CreateNewsRequest;
 use App\Model\IdResponse;
+use App\Model\ListOfNewsRequest;
+use App\Model\ListOfNewsResponse;
 use App\Model\NewsDetailsResponse;
-use App\Entity\News;
-use App\Exception\NoCategoriesWithGivenIdsForNews;
-use App\Model\NewsListResponse;
+use App\Model\NewsStatusesResponse;
 use App\Repository\CategoryRepository;
 use App\Repository\NewsRepository;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
 
 class NewsService
 {
@@ -23,16 +26,55 @@ class NewsService
         private readonly NewsRepository $newsRepository,
         private readonly CategoryRepository $categoryRepository,
         private readonly EntityManagerInterface $em,
+        private readonly UserService $userService,
+        private readonly int $pageLimit,
     )
     {
     }
 
-    public function createNews(CreateNewsRequest $createNewsRequest, UserInterface $user): IdResponse
+    public function findByRequest(ListOfNewsRequest $listOfNewsRequest): ListOfNewsResponse
+    {
+        $items = [];
+        $paginator = $this->newsRepository->findByFilter(
+            $listOfNewsRequest->filter,
+            PaginationUtils::calcOffset($listOfNewsRequest->page, $this->pageLimit),
+            $this->pageLimit,
+        );
+
+        /** @var News $news */
+        foreach ($paginator as $news) {
+            $items[] = $this->prepareNewsDetails($news);
+        }
+
+        $total = $this->newsRepository->countByFilter($listOfNewsRequest->filter);
+
+        return (new ListOfNewsResponse())
+            ->setTotal($total)
+            ->setPage($listOfNewsRequest->page)
+            ->setPerPage($this->pageLimit)
+            ->setPages(PaginationUtils::calcPages($total, $this->pageLimit))
+            ->setItems($items);
+    }
+
+    public function prepareNewsDetails(News $news): NewsDetailsResponse
+    {
+        return (new NewsDetailsResponse())
+            ->setId($news->getId())
+            ->setTitle($news->getTitle())
+            ->setContent($news->getContent())
+            ->setCategories($news->getCategories())
+            ;
+    }
+
+    public function createNews(CreateNewsRequest $createNewsRequest, User $user): IdResponse
     {
         $news = (new News())
             ->setTitle($createNewsRequest->getTitle())
             ->setContent($createNewsRequest->getContent())
-            ->setAuthor($user);
+            ->setAuthor($user)
+            ->setCreatedAt(new \DateTimeImmutable())
+            ->setInactive()
+        ;
 
         $categories = $this->categoryRepository->findByIds($createNewsRequest->getCategoryIds());
 
@@ -50,33 +92,51 @@ class NewsService
         return new IdResponse($news->getId());
     }
 
-    public function getNewsList(int $status, int $page): NewsListResponse
+    public function sendForModeration(News $news, User $user): void
     {
-        $items = [];
-        $paginator = $this->newsRepository->getNewsByStatusPaginated(
-            $status,
-            PaginationUtils::calcOffset($page, self::PAGE_LIMIT),
-            self::PAGE_LIMIT
-        );
-
-        foreach ($paginator as $news) {
-            $items[] = NewsDetailsResponse::createByEntity($news);
+        if (!$news->isUserAuthor($user)) {
+            throw new UserIsNotAuthorException();
         }
 
-        $total = $this->newsRepository->countByStatus(News::STATUS_ACTIVE);
+        if (!$news->isInactive() && !$news->isRejected()) {
+            throw new WrongStatusException();
+        }
 
-        return (new NewsListResponse())
-            ->setTotal($total)
-            ->setPage($page)
-            ->setPerPage(self::PAGE_LIMIT)
-            ->setPages(PaginationUtils::calcPages($total, self::PAGE_LIMIT))
-            ->setItems($items);
+        $news->setModerating();
+
+        $this->em->flush();
     }
 
-    public function getNewsById(int $id): NewsDetailsResponse
+    public function approve(News $news, User $moderator): void
     {
-        $news = $this->newsRepository->find($id);
+        $this->changeStatus($news, News::STATUS_APPROVED, $moderator);
+    }
 
-        return NewsDetailsResponse::createByEntity($news);
+    public function reject(News $news, User $moderator): void
+    {
+        $this->changeStatus($news, News::STATUS_REJECTED, $moderator);
+    }
+
+    public function ban(News $news, User $moderator): void
+    {
+        $this->changeStatus($news, News::STATUS_BANNED, $moderator);
+        $this->userService->banUser($news->getAuthor());
+    }
+
+    protected function changeStatus(News $news, int $status, User $user): void
+    {
+        if (!$news->isUserModerator($user)) {
+            throw new UserIsNotModeratorException();
+        }
+
+        $news->setStatus($status);
+        $news->setModeratedAt(new \DateTimeImmutable());
+
+        $this->em->flush();
+    }
+
+    public function getNewsStatuses(): NewsStatusesResponse
+    {
+        return new NewsStatusesResponse(News::getStatusLabels());
     }
 }
