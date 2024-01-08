@@ -245,4 +245,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return in_array(self::ROLE_MODERATOR, $this->getRoles());
     }
+
+    public function isAuthor(): bool
+    {
+        return in_array(self::ROLE_AUTHOR, $this->getRoles());
+    }
+
+    public function isAdmin(): bool
+    {
+        return in_array(self::ROLE_ADMIN, $this->getRoles());
+    }
+
+    public function isActive(): bool
+    {
+        return $this->getStatus() === self::STATUS_ACTIVE;
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->getStatus() === self::STATUS_BANNED;
+    }
 }

@@ -17,6 +17,7 @@ use App\Model\NewsStatusesResponse;
 use App\Repository\CategoryRepository;
 use App\Repository\NewsRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Common\Collections\Collection;
 
 class NewsService
 {
@@ -27,18 +28,20 @@ class NewsService
         private readonly CategoryRepository $categoryRepository,
         private readonly EntityManagerInterface $em,
         private readonly UserService $userService,
+        private readonly CategoryService $categoryService,
         private readonly int $pageLimit,
     )
     {
     }
 
-    public function findByRequest(ListOfNewsRequest $listOfNewsRequest): ListOfNewsResponse
+    public function findByRequest(ListOfNewsRequest $listOfNewsRequest, ?User $user): ListOfNewsResponse
     {
         $items = [];
-        $paginator = $this->newsRepository->findByFilter(
+        $paginator = $this->newsRepository->findByFilterPaginated(
             $listOfNewsRequest->filter,
             PaginationUtils::calcOffset($listOfNewsRequest->page, $this->pageLimit),
             $this->pageLimit,
+            $user
         );
 
         /** @var News $news */
@@ -58,11 +61,16 @@ class NewsService
 
     public function prepareNewsDetails(News $news): NewsDetailsResponse
     {
+        $categories = [];
+        foreach ($news->getCategories() as $category) {
+            $categories[] = $this->categoryService->prepareCategoryDetails($category);
+        }
+
         return (new NewsDetailsResponse())
             ->setId($news->getId())
             ->setTitle($news->getTitle())
             ->setContent($news->getContent())
-            ->setCategories($news->getCategories())
+            ->setCategories($categories)
             ;
     }
 

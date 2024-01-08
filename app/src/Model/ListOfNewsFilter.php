@@ -13,5 +13,7 @@ class ListOfNewsFilter
         #[Assert\Email]
         #[Assert\Length(max: 255)]
         public readonly ?string $title,
+
+        public readonly ?int $status,
     ) {}
 }

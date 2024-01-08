@@ -60,7 +60,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getOneOrNullResult();
     }
 
-    public function findByFilter(?ListOfUsersFilter $filter, int $offset, int $limit): Paginator
+    public function findByFilterPaginated(?ListOfUsersFilter $filter, int $offset, int $limit): Paginator
     {
         $query = $this->createQueryBuilder('u');
 

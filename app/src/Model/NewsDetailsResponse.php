@@ -14,7 +14,7 @@ class NewsDetailsResponse
     private string $content;
 
     #[OA\Property(property: 'categories', type: 'array', items: new OA\Items(type: CategoryDetailsResponse::class))]
-    private Collection $categories;
+    private array $categories;
 
     public function getId(): int
     {
@@ -52,12 +52,12 @@ class NewsDetailsResponse
         return $this;
     }
 
-    public function getCategories(): Collection
+    public function getCategories(): array
     {
         return $this->categories;
     }
 
-    public function setCategories(Collection $categories): self
+    public function setCategories(array $categories): self
     {
         $this->categories = $categories;
 

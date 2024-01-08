@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Category;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -27,8 +28,8 @@ class CategoryRepository extends ServiceEntityRepository
     public function findByIds(array $ids): array
     {
         return $this->createQueryBuilder('c')
-            ->andWhere('c.id IN :ids')
-            ->setParameter('ids', $ids)
+            ->andWhere('c.id IN (:ids)')
+            ->setParameter('ids', $ids, ArrayParameterType::INTEGER)
             ->getQuery()
             ->getResult()
         ;

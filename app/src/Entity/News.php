@@ -38,7 +38,7 @@ class News
     private ?User $author = null;
 
     #[ORM\ManyToOne(inversedBy: 'newsToModerate')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?User $moderator = null;
 
     #[JoinTable(name: 'news_category_relation')]

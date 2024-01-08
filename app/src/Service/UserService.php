@@ -27,7 +27,7 @@ class UserService
     public function findByRequest(ListOfUsersRequest $findUsersRequest): ListOfUsersResponse
     {
         $items = [];
-        $paginator = $this->userRepository->findByFilter(
+        $paginator = $this->userRepository->findByFilterPaginated(
             $findUsersRequest->filter,
             PaginationUtils::calcOffset($findUsersRequest->page, $this->pageLimit),
             $this->pageLimit,

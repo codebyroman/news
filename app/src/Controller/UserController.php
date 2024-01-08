@@ -37,9 +37,9 @@ class UserController extends AbstractController
     #[OA\Response(response: 200, description: 'Returns users', attachables: [new Model(type: ListOfUsersResponse::class)])]
     #[OA\Response(response: 403, description: 'Forbidden', attachables: [new Model(type: ErrorResponse::class)])]
     #[OA\RequestBody(attachables: [new Model(type: ListOfUsersRequest::class)])]
-    public function findListOfUsers(#[MapQueryString] ListOfUsersRequest $findUsersRequest): Response
+    public function findListOfUsers(#[MapQueryString] ListOfUsersRequest $listOfUsersRequest = new ListOfUsersRequest()): Response
     {
-        return $this->json($this->userService->findByRequest($findUsersRequest));
+        return $this->json($this->userService->findByRequest($listOfUsersRequest));
     }
 
     #[Route('/user/{id}', methods: ['GET'])]

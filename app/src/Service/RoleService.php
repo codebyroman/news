@@ -33,12 +33,6 @@ class RoleService
 
     private function grantRole(User $user, string $role): void
     {
-        $user = $this->userRepository->find($userId);
-
-        if (!$user) {
-            throw new UserNotFoundException();
-        }
-
         $user->setRoles([$role]);
 
         $this->em->persist($user);
